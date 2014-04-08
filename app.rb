@@ -13,13 +13,18 @@ class AppServer < Sinatra::Base
     end
 	
 	post '/offers' do
-		"Not yet implemented."
+		# description, tag, location (street address or lat/lng), imgURL, apiKey? (not for demo in the presentation, but in real life one would be required)
 	end
 	
-	get '/watchtags/:id' do
+	get '/users/:id/watchtags' do
 		result = { :success => false }
 		begin
-			result[:watchtags] = UserManager.instance.get_watchtags(params[:id])
+			watchtags = UserManager.instance.get_watchtags(params[:id])
+			converted = []
+			watchtags.each do |watchtag|
+				converted << {:tag => watchtag.tag, :webhook => watchtag.webhook}
+			end
+			result[:watchtags] = converted
 			result[:success] = true
 		rescue Exception => e
 			result[:success] = false
@@ -28,26 +33,31 @@ class AppServer < Sinatra::Base
 		result.to_json
 	end
 	
-	post '/watchtags/:id' do
+	post '/users/:id/watchtags' do
 		result = {:success => false}
-		unless params[:watchtags].nil?
+		body = JSON.parse request.body.read
+		if body["webhook"].nil?
+			result[:success] = false
+			result[:message] = "A webhook is required."
+		end
+		unless body["watchtags"].nil?
 			begin
-				watchtags = JSON.parse(params[:watchtags])
+				watchtags = body["watchtags"]
 				if watchtags.respond_to? :each
 					watchtags.each do |watchtag|
-						UserManager.instance.add_watchtag(params[:id],watchtag)
+						UserManager.instance.add_watchtag(params[:id],watchtag,body["webhook"])
 					end
 					result[:success] = true
 				else
-					UserManager.instance.add_watchtag(params[:id],watchtags)
+					UserManager.instance.add_watchtag(params[:id],watchtags,body["webhook"])
 					result[:success] = true
 				end
 			rescue JSON::ParserError => e
-				if params[:watchtags].split.length > 1
+				if body["watchtags"].split.length > 1
 					result[:success] = false
 					result[:message] = "Invalid JSON. To provide multiple watchtags you must provide a JSON encoded array of tags."
 				else
-					UserManager.instance.add_watchtag(params[:id],params[:watchtags])
+					UserManager.instance.add_watchtag(params[:id],body["watchtags"],body["webhook"])
 					result[:success] = true
 				end
 			rescue Exception => e
@@ -58,18 +68,19 @@ class AppServer < Sinatra::Base
 		result.to_json
 	end
 	
-	delete '/watchtags/:id' do
+	delete '/users/:id/watchtags' do
 		result = { :success => false }
+		body = JSON.parse request.body.read
 		begin
-			if params[:watchtags].nil?
+			if body["watchtags"].nil?
 				UserManager.instance.remove_all_watchtags(params[:id])
 				result[:success] = true
 				result[:message] = "Deleted all watchtags for user #{params[:id]}."
 			else
-				watchtags = JSON.parse(params[:watchtags])
+				watchtags = body["watchtags"]
 				if watchtags.respond_to? :each
 					rejects = ""
-					params[:watchtags].each do |watchtag|
+					body["watchtags"].each do |watchtag|
 						success = UserManager.instance.remove_watchtag(params[:id], watchtag)
 						rejects += " #{watchtag}"
 					end
@@ -77,16 +88,16 @@ class AppServer < Sinatra::Base
 					result[:message] = rejects if not rejects.empty?
 					result[:message] = "The given watchtags weren't being watched by this user: #{watchtags}" if rejects.empty?
 				else
-					result[:success] = UserManager.instance.remove_watchtag(params[:id], params[:watchtags])
+					result[:success] = UserManager.instance.remove_watchtag(params[:id], body["watchtags"])
 					result[:message] = "Delete successful." if result[:success] == true
-					result[:message] = "The given watchtag wasn't being watched by this user: #{params[:watchtags]}" if result[:success] == false
+					result[:message] = "The given watchtag wasn't being watched by this user: #{body["watchtags"]}" if result[:success] == false
 				end
 			end
 		rescue JSON::ParserError => e
 			# user only provided one watchtag, or bad json
-			result[:success] = UserManager.instance.remove_watchtag(params[:id], params[:watchtags])
+			result[:success] = UserManager.instance.remove_watchtag(params[:id], body["watchtags"])
 			result[:message] = "Delete successful." if result[:success] == true
-			result[:message] = "The given watchtag wasn't being watched by this user: #{params[:watchtags]}" if result[:success] == false
+			result[:message] = "The given watchtag wasn't being watched by this user: #{body["watchtags"]}" if result[:success] == false
 		rescue Exception => e
 			result[:success] = false
 			result[:message] = e.message

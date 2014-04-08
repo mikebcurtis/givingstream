@@ -2,6 +2,15 @@ require 'rubygems'
 require 'json'
 require 'singleton'
 
+class Watchtag
+	attr_accessor :tag, :webhook
+	
+	def initialize tag, webhook
+		@tag = tag
+		@webhook = webhook
+	end
+end
+
 class UserManager
   include Singleton
   attr_accessor :users, :filename
@@ -48,13 +57,13 @@ class UserManager
     cache_user_data
   end
   
-  def add_watchtag id, watchtag
+  def add_watchtag id, watchtag, webhook
 	matches = @users.select { |user| user[:id] == id }
 	if matches.length <= 0
 		return false
 	end
 	matches.each do |user|
-		user[:watchtags] << watchtag
+		user[:watchtags] << Watchtag.new(watchtag, webhook)
 	end
 	
 	cache_user_data
@@ -64,7 +73,7 @@ class UserManager
   def remove_watchtag id, tag
 	matches = @users.select { |user| user[:id] == id}
 	matches.each do |user| 
-		rejects = user[:watchtags].reject! { |watchtag| watchtag == tag} 
+		rejects = user[:watchtags].reject! { |watchtag| watchtag.tag == tag} 
 		if rejects.nil?
 			return false
 		end
