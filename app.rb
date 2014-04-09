@@ -3,8 +3,11 @@ require 'sinatra'
 require 'net/https'
 require 'uri'
 require 'json'
+require 'net/http'
+require 'uri'
 
 require 'helpers/user_manager.rb'
+require 'helpers/location.rb'
 
 class AppServer < Sinatra::Base 
     enable :sessions
@@ -14,7 +17,38 @@ class AppServer < Sinatra::Base
 	
 	post '/offers' do
 		# description, tag, location (street address or lat/lng), imgURL, apiKey? (not for demo in the presentation, but in real life one would be required)
+		result = { :success => false }
+		begin 
+			body = JSON.parse request.body.read
+			push_offer (body[:location], body[:tag], body[:description], body[:imgURL])
+		rescue Exception => e
+			result[:success] = false
+			result[:message] = e.message
+		end
+		result.to_json
 	end
+	
+	def push_offer location, tags, description, imgURL = nil
+		data = { :location => location, :tag => tag, :description => description, :imgURL => imgURL }
+		
+		UserManager.instance.users.each do |user|
+			unless user[:watchtags].empty? or not user[:watchtags].respond_to? :each or (tags & user[:watchtags].collect{|watchtag| watchtag.tag}).empty?
+				matches = user[:watchtags].reject { |watchtag| not tags.include? watchtag.tag }
+				matches.each do |watchtag|
+					begin
+						uri = URI.parse(watchtag.webhook)
+						http = Net::HTTP.new(uri.host, uri.port)
+						request = Net::HTTP::Post.new(uri.request_uri)
+						request.set_form_data(data)
+						request["Content-Type"] = "application/json"
+						response = http.request(request)
+					rescue
+						# skip if uri doesn't parse, or response is bad
+					end
+				end
+			end
+		end
+	end	
 	
 	get '/users/:id/watchtags' do
 		result = { :success => false }
