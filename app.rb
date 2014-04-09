@@ -20,7 +20,10 @@ class AppServer < Sinatra::Base
 		result = { :success => false }
 		begin 
 			body = JSON.parse request.body.read
-			push_offer (body[:location], body[:tag], body[:description], imgURL=body[:imgURL])
+			# TODO get array of tags from thesaurus
+			tags = []
+			tags << body[:tag]
+			push_offer (body[:location], tags, body[:description], imgURL=body[:imgURL])
 		rescue Exception => e
 			result[:success] = false
 			result[:message] = e.message
