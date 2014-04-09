@@ -24,6 +24,9 @@ class AppServer < Sinatra::Base
 			# TODO get array of tags from thesaurus
 			tags = get_synonyms(body[:tag])
 			push_offer (body[:location], tags, body[:description], imgURL=body[:imgURL])
+			result[:success] = true
+			result[:message] = "Sent offers for the following key words: " + tags.inspect
+			result[:tags] = tags
 		rescue Exception => e
 			result[:success] = false
 			result[:message] = e.message
