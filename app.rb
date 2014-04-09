@@ -20,7 +20,7 @@ class AppServer < Sinatra::Base
 		result = { :success => false }
 		begin 
 			body = JSON.parse request.body.read
-			push_offer (body[:location], body[:tag], body[:description], body[:imgURL])
+			push_offer (body[:location], body[:tag], body[:description], imgURL=body[:imgURL])
 		rescue Exception => e
 			result[:success] = false
 			result[:message] = e.message
@@ -29,6 +29,9 @@ class AppServer < Sinatra::Base
 	end
 	
 	def push_offer location, tags, description, imgURL = nil
+		if imgURL.nil?
+			imgURL = ""
+		end
 		data = { :location => location, :tag => tag, :description => description, :imgURL => imgURL }
 		
 		UserManager.instance.users.each do |user|
