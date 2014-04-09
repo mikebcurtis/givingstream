@@ -11,6 +11,7 @@ require 'helpers/location.rb'
 
 class AppServer < Sinatra::Base 
     enable :sessions
+	
     get '/' do
         "GivingStream API"
     end
@@ -21,8 +22,7 @@ class AppServer < Sinatra::Base
 		begin 
 			body = JSON.parse request.body.read
 			# TODO get array of tags from thesaurus
-			tags = []
-			tags << body[:tag]
+			tags = get_synonyms(body[:tag])
 			push_offer (body[:location], tags, body[:description], imgURL=body[:imgURL])
 		rescue Exception => e
 			result[:success] = false
@@ -35,7 +35,7 @@ class AppServer < Sinatra::Base
 		if imgURL.nil?
 			imgURL = ""
 		end
-		data = { :location => location, :tag => tag, :description => description, :imgURL => imgURL }
+		data = { :location => location, :tags => tags, :description => description, :imgURL => imgURL }
 		
 		UserManager.instance.users.each do |user|
 			unless user[:watchtags].empty? or not user[:watchtags].respond_to? :each or (tags & user[:watchtags].collect{|watchtag| watchtag.tag}).empty?
@@ -55,6 +55,18 @@ class AppServer < Sinatra::Base
 			end
 		end
 	end	
+	
+	def get_synonyms tag
+		begin
+			url = "http://words.bighugelabs.com/api/2/0b177985e3e819c093e1ba66c3405c58/" + tag + "/json"
+			uri = URI.parse(url)
+			res = Net::HTTP.get(uri)
+			parsed_res = JSON.parse(res)
+			return parsed_res["noun"]["syn"] << tag
+		rescue
+			return [] << tag
+		end
+	end
 	
 	get '/users/:id/watchtags' do
 		result = { :success => false }
