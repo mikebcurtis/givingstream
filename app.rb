@@ -16,14 +16,15 @@ class AppServer < Sinatra::Base
         "GivingStream API"
     end
 	
+	post '/' do
+	end
+	
 	post '/offers' do
-		# description, tag, location (street address or lat/lng), imgURL, apiKey? (not for demo in the presentation, but in real life one would be required)
 		result = { :success => false }
 		begin 
 			body = JSON.parse request.body.read
-			# TODO get array of tags from thesaurus
-			tags = get_synonyms(body[:tag])
-			push_offer (body[:location], tags, body[:description], imgURL=body[:imgURL])
+			tags = get_synonyms(body["tag"])
+			push_offer (body["location"], tags, body["description"], imgURL=body["imgURL"])
 			result[:success] = true
 			result[:message] = "Sent offers for the following key words: " + tags.inspect
 			result[:tags] = tags
