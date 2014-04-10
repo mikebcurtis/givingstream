@@ -11,6 +11,11 @@ require 'helpers/location.rb'
 
 class AppServer < Sinatra::Base 
     enable :sessions
+	attr_accessor :debug_offer
+	
+	def initialize
+		@debug_offer = []
+	end
 	
     get '/' do
         "GivingStream API"
@@ -19,10 +24,16 @@ class AppServer < Sinatra::Base
 	post '/' do
 	end
 	
+	get '/offers/debug' do
+		res = @debug_offer.to_json
+		@debug_offer = []
+		return res
+	end
+	
 	post '/offers' do
 		result = { :success => false }
 		begin 
-			body = JSON.parse request.body.read
+			body = JSON.parse(request.body.read)
 			tags = get_synonyms(body["tag"])
 			push_offer (body["location"], tags, body["description"], imgURL=body["imgURL"])
 			result[:success] = true
@@ -45,6 +56,9 @@ class AppServer < Sinatra::Base
 			unless user[:watchtags].empty? or not user[:watchtags].respond_to? :each or (tags & user[:watchtags].collect{|watchtag| watchtag.tag}).empty?
 				matches = user[:watchtags].reject { |watchtag| not tags.include? watchtag.tag }
 				matches.each do |watchtag|
+					if watchtag.webhook == "http://ec2-54-80-167-106.compute-1.amazonaws.com/"
+						@debug_offer << data
+					end
 					begin
 						uri = URI.parse(watchtag.webhook)
 						http = Net::HTTP.new(uri.host, uri.port)
