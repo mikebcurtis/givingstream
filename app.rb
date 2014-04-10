@@ -64,7 +64,6 @@ class AppServer < Sinatra::Base
 						http.set_debug_output($stdout)
 						request = Net::HTTP::Post.new(uri.request_uri)
 						request.add_field('Content-Type', 'application/x-www-form-urlencoded')
-						data[:tags] = watchtag.tag
 						request.body = 'offer=' + data.to_json
 						#request.form_data = "offer=" + data.to_json
 						#request.set_form_data("offer=" + data.to_json)
