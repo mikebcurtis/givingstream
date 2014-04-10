@@ -63,8 +63,11 @@ class AppServer < Sinatra::Base
 						http = Net::HTTP.new(uri.host, uri.port)
 						http.set_debug_output($stdout)
 						request = Net::HTTP::Post.new(uri.request_uri)
-						request.set_form_data("offer=" + data.to_json)
-						request["Content-Type"] = "text"
+						request.add_field('Content-Type', 'application/x-www-form-urlencoded')
+						request.body = 'offer=' + data.to_json
+						#request.form_data = "offer=" + data.to_json
+						#request.set_form_data("offer=" + data.to_json)
+						#request["Content-Type"] = "text/plain"
 						response = http.request(request)
 						
 						#response = Net::HTTP.post_form(uri, {"offer" => data.to_json})
