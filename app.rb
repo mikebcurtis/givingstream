@@ -9,8 +9,7 @@ require 'uri'
 require 'helpers/user_manager.rb'
 require 'helpers/location.rb'
 
-class AppServer < Sinatra::Base 
-    enable :sessions
+class AppServer < Sinatra::Base
 	attr_accessor :debug_offer
 	
 	def initialize
@@ -35,7 +34,7 @@ class AppServer < Sinatra::Base
 		begin 
 			body = JSON.parse(request.body.read)
 			tags = get_synonyms(body["tag"])
-			push_offer (body["location"], tags, body["description"], imgURL=body["imgURL"])
+			push_offer(body["location"], tags, body["description"], imgURL=body["imgURL"])
 			result[:success] = true
 			result[:message] = "Sent offers for the following key words: " + tags.inspect
 			result[:tags] = tags
@@ -62,14 +61,23 @@ class AppServer < Sinatra::Base
 					begin
 						uri = URI.parse(watchtag.webhook)
 						http = Net::HTTP.new(uri.host, uri.port)
+						http.set_debug_output($stdout)
 						request = Net::HTTP::Post.new(uri.request_uri)
 						request.set_form_data("offer=" + data.to_json)
-						request["Content-Type"] = "application/x-www-form-urlencoded"
+						request["Content-Type"] = "text"
 						response = http.request(request)
 						
 						#response = Net::HTTP.post_form(uri, {"offer" => data.to_json})
-					rescue
+						
+						puts "Sent to webhook #{watchtag.webhook}"
+						puts response.code
+						puts response.body
+						
+						
+					rescue Exception => e
 						# skip if uri doesn't parse, or response is bad
+						puts "Could not send to the webhook #{watchtag.webhook}"
+						puts e.message
 					end
 				end
 			end
@@ -142,7 +150,12 @@ class AppServer < Sinatra::Base
 	
 	delete '/users/:id/watchtags' do
 		result = { :success => false }
-		body = JSON.parse request.body.read
+		begin
+			body = JSON.parse request.body.read
+		rescue JSON::ParserError => e
+			result[:message] = e.message
+			return result.to_json
+		end
 		begin
 			if body["watchtags"].nil?
 				UserManager.instance.remove_all_watchtags(params[:id])
