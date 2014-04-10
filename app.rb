@@ -61,11 +61,13 @@ class AppServer < Sinatra::Base
 					end
 					begin
 						uri = URI.parse(watchtag.webhook)
-						http = Net::HTTP.new(uri.host, uri.port)
-						request = Net::HTTP::Post.new(uri.request_uri)
-						request.set_form_data(data)
-						request["Content-Type"] = "application/json"
-						response = http.request(request)
+						#http = Net::HTTP.new(uri.host, uri.port)
+						#request = Net::HTTP::Post.new(uri.request_uri)
+						#request.set_form_data(data)
+						#request["Content-Type"] = "application/json"
+						#response = http.request(request)
+						
+						response = Net::HTTP.post_form(uri, {"offer" => data.to_json})
 					rescue
 						# skip if uri doesn't parse, or response is bad
 					end
