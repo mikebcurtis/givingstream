@@ -14,7 +14,7 @@ class AppServer < Sinatra::Base
 	attr_accessor :debug_offer
 	
 	def initialize
-		@debug_offer = []
+		@debug_offer = ""
 	end
 	
     get '/' do
@@ -25,8 +25,8 @@ class AppServer < Sinatra::Base
 	end
 	
 	get '/offers/debug' do
-		res = @debug_offer.to_json
-		@debug_offer = []
+		res = @debug_offer
+		@debug_offer = ""
 		return res
 	end
 	
@@ -57,17 +57,17 @@ class AppServer < Sinatra::Base
 				matches = user[:watchtags].reject { |watchtag| not tags.include? watchtag.tag }
 				matches.each do |watchtag|
 					if watchtag.webhook == "http://ec2-54-80-167-106.compute-1.amazonaws.com/"
-						@debug_offer << data
+						@debug_offer = "offer=" + data.to_json
 					end
 					begin
 						uri = URI.parse(watchtag.webhook)
-						#http = Net::HTTP.new(uri.host, uri.port)
-						#request = Net::HTTP::Post.new(uri.request_uri)
-						#request.set_form_data(data)
-						#request["Content-Type"] = "application/json"
-						#response = http.request(request)
+						http = Net::HTTP.new(uri.host, uri.port)
+						request = Net::HTTP::Post.new(uri.request_uri)
+						request.set_form_data("offer=" + data.to_json)
+						request["Content-Type"] = "application/x-www-form-urlencoded"
+						response = http.request(request)
 						
-						response = Net::HTTP.post_form(uri, {"offer" => data.to_json})
+						#response = Net::HTTP.post_form(uri, {"offer" => data.to_json})
 					rescue
 						# skip if uri doesn't parse, or response is bad
 					end
