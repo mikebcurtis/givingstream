@@ -151,47 +151,67 @@ class AppServer < Sinatra::Base
 		result.to_json
 	end
 	
-	delete '/users/:id/watchtags' do
+	delete '/users/:id/watchtags/' do
 		result = { :success => false }
 		begin
-			body = JSON.parse request.body.read
-		rescue JSON::ParserError => e
-			result[:message] = e.message
-			return result.to_json
-		end
-		begin
-			if body["watchtags"].nil?
-				UserManager.instance.remove_all_watchtags(params[:id])
-				result[:success] = true
-				result[:message] = "Deleted all watchtags for user #{params[:id]}."
-			else
-				watchtags = body["watchtags"]
-				if watchtags.respond_to? :each
-					rejects = ""
-					body["watchtags"].each do |watchtag|
-						success = UserManager.instance.remove_watchtag(params[:id], watchtag)
-						rejects += " #{watchtag}"
-					end
-					result[:success] = rejects.empty? == false
-					result[:message] = rejects if not rejects.empty?
-					result[:message] = "The given watchtags weren't being watched by this user: #{watchtags}" if rejects.empty?
-				else
-					result[:success] = UserManager.instance.remove_watchtag(params[:id], body["watchtags"])
-					result[:message] = "Delete successful." if result[:success] == true
-					result[:message] = "The given watchtag wasn't being watched by this user: #{body["watchtags"]}" if result[:success] == false
-				end
-			end
-		rescue JSON::ParserError => e
-			# user only provided one watchtag, or bad json
-			result[:success] = UserManager.instance.remove_watchtag(params[:id], body["watchtags"])
-			result[:message] = "Delete successful." if result[:success] == true
-			result[:message] = "The given watchtag wasn't being watched by this user: #{body["watchtags"]}" if result[:success] == false
-		rescue Exception => e
+			result[:success] = UserManager.instance.remove_all_watchtags(params[:id])
+			result[:message] = "Deleted all watchtags successfully." if result[:success] == true
+		rescue
 			result[:success] = false
-			result[:message] = e.message
+			result[:message] = "Failed to delete watchtags." if result[:success] == false
 		end
+		result.to_json	
+	end
+	
+	delete '/users/:id/watchtags/:tag' do 
+		result = { :success => false }
+		result[:success] = UserManager.instance.remove_watchtag(params[:id],params[:tag])
+		result[:message] = "Delete successful." if result[:success] == true
+		result[:message] = "Failed to delete #{params[:tag]}." if result[:success] == false
 		result.to_json
 	end
+	
+#	delete '/users/:id/watchtags' do
+#		result = { :success => false }
+#		begin
+#			body = JSON.parse request.body.read
+#		rescue JSON::ParserError => e
+#			result[:message] = e.message
+#			return result.to_json
+#		end
+#		begin
+#			if body["watchtags"].nil?
+#				UserManager.instance.remove_all_watchtags(params[:id])
+#				result[:success] = true
+#				result[:message] = "Deleted all watchtags for user #{params[:id]}."
+#			else
+#				watchtags = body["watchtags"]
+#				if watchtags.respond_to? :each
+#					rejects = ""
+#					body["watchtags"].each do |watchtag|
+#						success = UserManager.instance.remove_watchtag(params[:id], watchtag)
+#						rejects += " #{watchtag}"
+#					end
+#					result[:success] = rejects.empty? == false
+#					result[:message] = rejects if not rejects.empty?
+#					result[:message] = "The given watchtags weren't being watched by this user: #{watchtags}" if rejects.empty?
+#				else
+#					result[:success] = UserManager.instance.remove_watchtag(params[:id], body["watchtags"])
+#					result[:message] = "Delete successful." if result[:success] == true
+#					result[:message] = "The given watchtag wasn't being watched by this user: #{body["watchtags"]}" if result[:success] == false
+#				end
+#			end
+#		rescue JSON::ParserError => e
+#			# user only provided one watchtag, or bad json
+#			result[:success] = UserManager.instance.remove_watchtag(params[:id], body["watchtags"])
+#			result[:message] = "Delete successful." if result[:success] == true
+#			result[:message] = "The given watchtag wasn't being watched by this user: #{body["watchtags"]}" if result[:success] == false
+#		rescue Exception => e
+#			result[:success] = false
+#			result[:message] = e.message
+#		end
+#		result.to_json
+#	end
 	
 	post '/users' do
 		mgr = UserManager.instance
